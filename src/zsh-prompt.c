@@ -92,7 +92,6 @@ int main() {
                 git_odb_free(odb);
             }
             git_reference_free(head_refdirect);
-            git_reference_free(head_ref);
         }
         git_repository_free(repo);
     }
