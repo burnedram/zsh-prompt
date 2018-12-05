@@ -111,7 +111,9 @@ int main() {
                         }
                     }
 
-                    if (upstream_ref) {
+                    if (!upstream_ref)
+                        printf("No remote tracking branch\n");
+                    else {
                         const git_oid *upstream_oid = git_reference_target(upstream_ref);
                         char upstream_shortsha[9] = {0};
                         git_oid_tostr(upstream_shortsha, 8, upstream_oid);
@@ -123,9 +125,56 @@ int main() {
                             die_giterr(error);
                         printf("Upstream name: %s\n", upstream_name);
 
+                        {
+                            git_revwalk *walker = NULL;
+                            error = git_revwalk_new(&walker, repo);
+                            if (error)
+                                die_giterr(error);
+                            error = git_revwalk_push(walker, head_oid);
+                            if (error)
+                                die_giterr(error);
+                            error = git_revwalk_hide(walker, upstream_oid);
+                            if (error)
+                                die_giterr(error);
+                            git_oid walker_oid = {0};
+                            char walker_shortsha[9] = {0};
+
+                            size_t commits_ahead = 0;
+                            printf("====Head -> Remote====\n");
+                            while (!(error = git_revwalk_next(&walker_oid, walker))) {
+                                commits_ahead++;
+                                git_oid_tostr(walker_shortsha, 8, &walker_oid);
+                                printf("%s\n", walker_shortsha);
+                            }
+                            if (error != GIT_ITEROVER)
+                                die_giterr(error);
+
+                            git_revwalk_reset(walker);
+                            error = git_revwalk_push(walker, upstream_oid);
+                            if (error)
+                                die_giterr(error);
+                            error = git_revwalk_hide(walker, head_oid);
+                            if (error)
+                                die_giterr(error);
+
+                            size_t commits_behind = 0;
+                            printf("====Remote -> Head====\n");
+                            while (!(error = git_revwalk_next(&walker_oid, walker))) {
+                                commits_behind++;
+                                git_oid_tostr(walker_shortsha, 8, &walker_oid);
+                                printf("%s\n", walker_shortsha);
+                            }
+                            if (error != GIT_ITEROVER)
+                                die_giterr(error);
+
+                            printf("======================\n");
+                            printf("%d commits ahead\n", commits_ahead);
+                            printf("%d commits behind\n", commits_behind);
+
+                            git_revwalk_free(walker);
+                        }
+
                         git_reference_free(upstream_ref);
-                    } else {
-                        printf("No remote tracking branch\n");
                     }
                 }
 
