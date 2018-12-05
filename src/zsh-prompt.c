@@ -43,21 +43,19 @@ int get_branch(git_reference **out_ref, git_repository *repo, const git_oid *oid
     return error;
 }
 
-int get_odb_data(const void **out_data, size_t *out_size, git_odb *odb, const git_oid *oid) {
+int get_odb_data(git_odb_object **out_object, const void **out_data, size_t *out_size, git_odb *odb, const git_oid *oid) {
     if (!git_odb_exists(odb, oid))
         return GIT_ENOTFOUND;
 
     int error;
-    git_odb_object *odb_object = NULL;
-    error = git_odb_read(&odb_object, odb, oid);
+    error = git_odb_read(out_object, odb, oid);
     if (error)
         return error;
 
     if (out_size != NULL)
-        *out_size = git_odb_object_size(odb_object);
-    *out_data = git_odb_object_data(odb_object);
+        *out_size = git_odb_object_size(*out_object);
+    *out_data = git_odb_object_data(*out_object);
 
-    git_odb_object_free(odb_object);
     return error;
 }
 
@@ -140,12 +138,14 @@ int main() {
                 if (error)
                     die_giterr(error);
 
+                git_odb_object *object = NULL;
                 const void *data = NULL;
-                error = get_odb_data(&data, NULL, odb, head_oid);
+                error = get_odb_data(&object, &data, NULL, odb, head_oid);
                 if (error)
                     die_giterr(error);
                 printf("====ODB data====\n%s================\n", data);
 
+                git_odb_object_free(object);
                 git_odb_free(odb);
             }
             git_reference_free(head_ref);
