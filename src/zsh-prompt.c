@@ -19,7 +19,7 @@ int get_head(git_reference **out_ref, git_repository *repo) {
     return error;
 }
 
-int get_branch_name(const char **out_name, git_repository *repo, const git_oid *oid) {
+int get_branch(git_reference **out_ref, git_repository *repo, const git_oid *oid) {
     int error;
     git_branch_iterator *branches = NULL;
     error = git_branch_iterator_new(&branches, repo, GIT_BRANCH_LOCAL);
@@ -31,11 +31,12 @@ int get_branch_name(const char **out_name, git_repository *repo, const git_oid *
     const git_oid *branch_oid = NULL;
     while (!(error = git_branch_next(&branch_ref, &branch_type, branches))) {
         branch_oid = git_reference_target(branch_ref);
-        if (git_oid_cmp(oid, branch_oid))
-            continue;
-
-        error = git_branch_name(out_name, branch_ref);
-        break;
+        if (!git_oid_cmp(oid, branch_oid)) {
+            error = git_reference_resolve(out_ref, branch_ref);
+            git_reference_free(branch_ref);
+            break;
+        }
+        git_reference_free(branch_ref);
     }
 
     git_branch_iterator_free(branches);
@@ -80,17 +81,58 @@ int main() {
             if (error)
                 die_giterr(error);
 
-            const git_oid *head_oid = NULL;
-            head_oid = git_reference_target(head_ref);
+            const git_oid *head_oid = git_reference_target(head_ref);
             char head_shortsha[9] = {0};
             git_oid_tostr(head_shortsha, 8, head_oid);
-            printf("Commit %s\n", head_shortsha);
+            printf("HEAD: %s\n", head_shortsha);
 
-            const char *branch_name = NULL;
-            error = get_branch_name(&branch_name, repo, head_oid);
-            if (error)
-                die_giterr(error);
-            printf("Branch %s\n", branch_name);
+            {
+                git_reference *branch_ref = NULL;
+                error = get_branch(&branch_ref, repo, head_oid);
+                if (error)
+                    die_giterr(error);
+
+                const char *branch_name = NULL;
+                error = git_branch_name(&branch_name, branch_ref);
+                if (error)
+                    die_giterr(error);
+                printf("Branch %s\n", branch_name);
+
+                {
+                    git_reference *upstream_ref = NULL;
+                    {
+                        git_reference *upstream_ref_unresolved = NULL;
+                        error = git_branch_upstream(&upstream_ref_unresolved, branch_ref);
+                        if (error != GIT_ENOTFOUND) {
+                            if (error)
+                                die_giterr(error);
+                            error = git_reference_resolve(&upstream_ref, upstream_ref_unresolved);
+                            if (error)
+                                die_giterr(error);
+                            git_reference_free(upstream_ref_unresolved);
+                        }
+                    }
+
+                    if (upstream_ref) {
+                        const git_oid *upstream_oid = git_reference_target(upstream_ref);
+                        char upstream_shortsha[9] = {0};
+                        git_oid_tostr(upstream_shortsha, 8, upstream_oid);
+                        printf("Upstream OID: %s\n", upstream_shortsha);
+
+                        const char *upstream_name = NULL;
+                        error = git_branch_name(&upstream_name, upstream_ref);
+                        if (error)
+                            die_giterr(error);
+                        printf("Upstream name: %s\n", upstream_name);
+
+                        git_reference_free(upstream_ref);
+                    } else {
+                        printf("No remote tracking branch\n");
+                    }
+                }
+
+                git_reference_free(branch_ref);
+            }
 
             {
                 git_odb *odb = NULL;
