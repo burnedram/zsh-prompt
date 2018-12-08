@@ -218,6 +218,46 @@ int main() {
 
             git_status_list_free(status_list);
         }
+
+        {
+            git_strarray tag_names = {0};
+            error = git_tag_list(&tag_names, repo);
+            if (error)
+                die_giterr(error);
+
+            printf("====Tags====\n");
+            git_object *tag_object = NULL;
+            for (size_t i = 0; i < tag_names.count; i++) {
+                error = git_revparse_single(&tag_object, repo, tag_names.strings[i]);
+                if (error)
+                    die_giterr(error);
+
+                if (git_object_type(tag_object) == GIT_OBJ_TAG) {
+                    git_object *new_object = NULL;
+                    error = git_tag_peel(&new_object, (git_tag *)tag_object);
+                    if (error)
+                        die_giterr(error);
+                    git_object_free(tag_object);
+                    tag_object = new_object;
+                }
+
+                if (git_object_type(tag_object) != GIT_OBJ_COMMIT) {
+                    printf("%s does not point to a commit pls halp\n", tag_names.strings[i]);
+                    git_object_free(tag_object);
+                    continue;
+                }
+
+                git_commit *tag_commit = (git_commit *)tag_object;
+                const git_oid *tag_oid = git_commit_id(tag_commit);
+                char tag_shortsha[9] = {0};
+                git_oid_tostr(tag_shortsha, 8, tag_oid);
+
+                printf("%s %s\n", tag_names.strings[i], tag_shortsha);
+                git_object_free(tag_object);
+            }
+            printf("============\n");
+        }
+
         git_repository_free(repo);
     }
 
