@@ -175,6 +175,49 @@ int main() {
             }
             git_reference_free(head_ref);
         }
+
+        {
+            git_status_list *status_list = NULL;
+            git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+            opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+            opts.flags |= GIT_STATUS_OPT_EXCLUDE_SUBMODULES;
+            opts.flags |= GIT_STATUS_OPT_INCLUDE_UNTRACKED;
+            error = git_status_list_new(&status_list, repo, &opts);
+            if (error)
+                die_giterr(error);
+
+            size_t entrycount = git_status_list_entrycount(status_list);
+            const git_status_entry *status_entry = NULL;
+            char staged = 0, unstaged = 0, untracked = 0;
+            for (size_t i = 0; i < entrycount && (!staged || !unstaged || !untracked); i++) {
+                status_entry = git_status_byindex(status_list, i);
+                if (status_entry->status == GIT_STATUS_CURRENT)
+                    continue;
+
+                if (status_entry->head_to_index) {
+                    staged = 1;
+                }
+                if (status_entry->index_to_workdir) {
+                    if (status_entry->status & GIT_STATUS_WT_NEW)
+                        untracked = 1;
+                    else
+                        unstaged = 1;
+                }
+            }
+
+            printf("====Status====\n");
+            if (staged)
+                printf("There are staged changes\n");
+            if (unstaged)
+                printf("There are unstaged changes\n");
+            if (untracked)
+                printf("There are untracked changes\n");
+            if (!staged && !unstaged && !untracked)
+                printf("No changes\n");
+            printf("==============\n");
+
+            git_status_list_free(status_list);
+        }
         git_repository_free(repo);
     }
 
