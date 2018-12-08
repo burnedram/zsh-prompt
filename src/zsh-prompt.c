@@ -35,6 +35,10 @@ int get_odb_data(git_odb_object **out_object, const void **out_data, size_t *out
     return error;
 }
 
+int cred(git_cred **out, const char *url, const char *username_from_url, unsigned int allowed_types, void *payload) {
+    return git_cred_ssh_key_from_agent(out, username_from_url);
+}
+
 int main() {
     git_libgit2_init();
     printf("Hello world! %s v%d.%d\n", PROJECT_NAME, PROJECT_VERSION_MAJOR, PROJECT_VERSION_MINOR);
@@ -48,6 +52,8 @@ int main() {
             exit(0);
         } else if (error)
             die_giterr(error);
+
+        git_buf remote_name = {0};
 
         {
             git_reference *head_ref = NULL;
@@ -99,6 +105,11 @@ int main() {
                             if (error)
                                 die_giterr(error);
                             printf("Upstream name: %s\n", upstream_name);
+
+                            error = git_branch_remote_name(&remote_name, repo, git_reference_name(upstream_ref));
+                            if (error)
+                                die_giterr(error);
+                            printf("Upstream remote name: %s\n", remote_name.ptr);
 
                             {
                                 git_revwalk *walker = NULL;
@@ -256,6 +267,43 @@ int main() {
                 git_object_free(tag_object);
             }
             printf("============\n");
+        }
+
+        {
+            git_remote *remote = NULL;
+            if (remote_name.ptr) {
+                error = git_remote_lookup(&remote, repo, remote_name.ptr);
+
+                git_buf_free(&remote_name);
+                remote_name.ptr = NULL;
+            } else {
+                printf("Using default remote name \"origin\"\n");
+                error = git_remote_lookup(&remote, repo, "origin");
+            }
+            if (error)
+                die_giterr(error);
+
+            git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+            callbacks.credentials = cred;
+            error = git_remote_connect(remote, GIT_DIRECTION_FETCH, &callbacks, NULL, NULL);
+            if (error)
+                die_giterr(error);
+
+            const git_remote_head **refs = NULL;
+            size_t refs_len;
+            error = git_remote_ls(&refs, &refs_len, remote);
+            if (error)
+                die_giterr(error);
+
+            printf("====Remote refs====\n");
+            for (size_t i = 0; i < refs_len; i++) {
+                char shortsha[9] = {0};
+                git_oid_tostr(shortsha, 8, &refs[i]->oid);
+                printf("%s %s\n", shortsha, refs[i]->name);
+            }
+            printf("===================\n");
+
+            git_remote_free(remote);
         }
 
         git_repository_free(repo);
