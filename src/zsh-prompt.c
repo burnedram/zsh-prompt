@@ -19,30 +19,6 @@ int get_head(git_reference **out_ref, git_repository *repo) {
     return error;
 }
 
-int get_branch(git_reference **out_ref, git_repository *repo, const git_oid *oid) {
-    int error;
-    git_branch_iterator *branches = NULL;
-    error = git_branch_iterator_new(&branches, repo, GIT_BRANCH_LOCAL);
-    if (error)
-        return error;
-
-    git_reference *branch_ref = NULL;
-    git_branch_t branch_type;
-    const git_oid *branch_oid = NULL;
-    while (!(error = git_branch_next(&branch_ref, &branch_type, branches))) {
-        branch_oid = git_reference_target(branch_ref);
-        if (!git_oid_cmp(oid, branch_oid)) {
-            error = git_reference_resolve(out_ref, branch_ref);
-            git_reference_free(branch_ref);
-            break;
-        }
-        git_reference_free(branch_ref);
-    }
-
-    git_branch_iterator_free(branches);
-    return error;
-}
-
 int get_odb_data(git_odb_object **out_object, const void **out_data, size_t *out_size, git_odb *odb, const git_oid *oid) {
     if (!git_odb_exists(odb, oid))
         return GIT_ENOTFOUND;
@@ -83,102 +59,102 @@ int main() {
             char head_shortsha[9] = {0};
             git_oid_tostr(head_shortsha, 8, head_oid);
             printf("HEAD: %s\n", head_shortsha);
-
-            {
-                git_reference *branch_ref = NULL;
-                error = get_branch(&branch_ref, repo, head_oid);
-                if (error)
-                    die_giterr(error);
-
-                const char *branch_name = NULL;
-                error = git_branch_name(&branch_name, branch_ref);
-                if (error)
-                    die_giterr(error);
-                printf("Branch %s\n", branch_name);
+            
+            if (git_reference_is_branch(head_ref)) {
+                const char *branch_shorthand = NULL;
+                branch_shorthand = git_reference_shorthand(head_ref);
+                printf("Branch %s\n", branch_shorthand);
 
                 {
-                    git_reference *upstream_ref = NULL;
+                    git_reference *branch_ref = NULL;
+                    error = git_branch_lookup(&branch_ref, repo, branch_shorthand, GIT_BRANCH_LOCAL);
+                    if (error)
+                        die_giterr(error);
+
                     {
-                        git_reference *upstream_ref_unresolved = NULL;
-                        error = git_branch_upstream(&upstream_ref_unresolved, branch_ref);
-                        if (error != GIT_ENOTFOUND) {
-                            if (error)
-                                die_giterr(error);
-                            error = git_reference_resolve(&upstream_ref, upstream_ref_unresolved);
-                            if (error)
-                                die_giterr(error);
-                            git_reference_free(upstream_ref_unresolved);
-                        }
-                    }
-
-                    if (!upstream_ref)
-                        printf("No remote tracking branch\n");
-                    else {
-                        const git_oid *upstream_oid = git_reference_target(upstream_ref);
-                        char upstream_shortsha[9] = {0};
-                        git_oid_tostr(upstream_shortsha, 8, upstream_oid);
-                        printf("Upstream OID: %s\n", upstream_shortsha);
-
-                        const char *upstream_name = NULL;
-                        error = git_branch_name(&upstream_name, upstream_ref);
-                        if (error)
-                            die_giterr(error);
-                        printf("Upstream name: %s\n", upstream_name);
-
+                        git_reference *upstream_ref = NULL;
                         {
-                            git_revwalk *walker = NULL;
-                            error = git_revwalk_new(&walker, repo);
-                            if (error)
-                                die_giterr(error);
-                            error = git_revwalk_push(walker, head_oid);
-                            if (error)
-                                die_giterr(error);
-                            error = git_revwalk_hide(walker, upstream_oid);
-                            if (error)
-                                die_giterr(error);
-                            git_oid walker_oid = {0};
-                            char walker_shortsha[9] = {0};
-
-                            size_t commits_ahead = 0;
-                            printf("====Head -> Remote====\n");
-                            while (!(error = git_revwalk_next(&walker_oid, walker))) {
-                                commits_ahead++;
-                                git_oid_tostr(walker_shortsha, 8, &walker_oid);
-                                printf("%s\n", walker_shortsha);
+                            git_reference *upstream_ref_unresolved = NULL;
+                            error = git_branch_upstream(&upstream_ref_unresolved, branch_ref);
+                            if (error != GIT_ENOTFOUND) {
+                                if (error)
+                                    die_giterr(error);
+                                error = git_reference_resolve(&upstream_ref, upstream_ref_unresolved);
+                                if (error)
+                                    die_giterr(error);
+                                git_reference_free(upstream_ref_unresolved);
                             }
-                            if (error != GIT_ITEROVER)
-                                die_giterr(error);
-
-                            git_revwalk_reset(walker);
-                            error = git_revwalk_push(walker, upstream_oid);
-                            if (error)
-                                die_giterr(error);
-                            error = git_revwalk_hide(walker, head_oid);
-                            if (error)
-                                die_giterr(error);
-
-                            size_t commits_behind = 0;
-                            printf("====Remote -> Head====\n");
-                            while (!(error = git_revwalk_next(&walker_oid, walker))) {
-                                commits_behind++;
-                                git_oid_tostr(walker_shortsha, 8, &walker_oid);
-                                printf("%s\n", walker_shortsha);
-                            }
-                            if (error != GIT_ITEROVER)
-                                die_giterr(error);
-
-                            printf("======================\n");
-                            printf("%d commits ahead\n", commits_ahead);
-                            printf("%d commits behind\n", commits_behind);
-
-                            git_revwalk_free(walker);
                         }
 
-                        git_reference_free(upstream_ref);
-                    }
-                }
+                        if (!upstream_ref)
+                            printf("No remote tracking branch\n");
+                        else {
+                            const git_oid *upstream_oid = git_reference_target(upstream_ref);
+                            char upstream_shortsha[9] = {0};
+                            git_oid_tostr(upstream_shortsha, 8, upstream_oid);
+                            printf("Upstream OID: %s\n", upstream_shortsha);
 
-                git_reference_free(branch_ref);
+                            const char *upstream_name = NULL;
+                            error = git_branch_name(&upstream_name, upstream_ref);
+                            if (error)
+                                die_giterr(error);
+                            printf("Upstream name: %s\n", upstream_name);
+
+                            {
+                                git_revwalk *walker = NULL;
+                                error = git_revwalk_new(&walker, repo);
+                                if (error)
+                                    die_giterr(error);
+                                error = git_revwalk_push(walker, head_oid);
+                                if (error)
+                                    die_giterr(error);
+                                error = git_revwalk_hide(walker, upstream_oid);
+                                if (error)
+                                    die_giterr(error);
+                                git_oid walker_oid = {0};
+                                char walker_shortsha[9] = {0};
+
+                                size_t commits_ahead = 0;
+                                printf("====Head -> Remote====\n");
+                                while (!(error = git_revwalk_next(&walker_oid, walker))) {
+                                    commits_ahead++;
+                                    git_oid_tostr(walker_shortsha, 8, &walker_oid);
+                                    printf("%s\n", walker_shortsha);
+                                }
+                                if (error != GIT_ITEROVER)
+                                    die_giterr(error);
+
+                                git_revwalk_reset(walker);
+                                error = git_revwalk_push(walker, upstream_oid);
+                                if (error)
+                                    die_giterr(error);
+                                error = git_revwalk_hide(walker, head_oid);
+                                if (error)
+                                    die_giterr(error);
+
+                                size_t commits_behind = 0;
+                                printf("====Remote -> Head====\n");
+                                while (!(error = git_revwalk_next(&walker_oid, walker))) {
+                                    commits_behind++;
+                                    git_oid_tostr(walker_shortsha, 8, &walker_oid);
+                                    printf("%s\n", walker_shortsha);
+                                }
+                                if (error != GIT_ITEROVER)
+                                    die_giterr(error);
+
+                                printf("======================\n");
+                                printf("%d commits ahead\n", commits_ahead);
+                                printf("%d commits behind\n", commits_behind);
+
+                                git_revwalk_free(walker);
+                            }
+
+                            git_reference_free(upstream_ref);
+                        }
+                    }
+
+                    git_reference_free(branch_ref);
+                }
             }
 
             {
