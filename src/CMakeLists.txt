@@ -10,12 +10,10 @@ CONFIGURE_FILE(
 )
 INCLUDE_DIRECTORIES("${zsh-prompt_BINARY_DIR}")
 
-INCLUDE_DIRECTORIES("${LIBSSH2_INSTALL_PATH}/include")
-LINK_DIRECTORIES("${LIBSSH2_INSTALL_PATH}/lib")
-INCLUDE_DIRECTORIES("${LIBGIT2_INSTALL_PATH}/include")
-LINK_DIRECTORIES("${LIBGIT2_INSTALL_PATH}/lib")
+INCLUDE_DIRECTORIES("${DEPS_INCLUDE_DIR}")
+LINK_DIRECTORIES("${DEPS_LIB_DIR}")
 
 ADD_EXECUTABLE(zsh-prompt zsh-prompt.c)
-TARGET_LINK_LIBRARIES(zsh-prompt libgit2.a libssh2.a libssl.a libcrypto.a curl z dl gcrypt)
+TARGET_LINK_LIBRARIES(zsh-prompt libgit2.a libz.a libcurl.a libssh2.a crypto pthread ssl)
 
 INSTALL (TARGETS zsh-prompt DESTINATION bin)
