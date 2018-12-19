@@ -14,6 +14,6 @@ INCLUDE_DIRECTORIES("${DEPS_INCLUDE_DIR}")
 LINK_DIRECTORIES("${DEPS_LIB_DIR}")
 
 ADD_EXECUTABLE(zsh-prompt zsh-prompt.c)
-TARGET_LINK_LIBRARIES(zsh-prompt libgit2.a libz.a libcurl.a libssh2.a crypto pthread ssl)
+TARGET_LINK_LIBRARIES(zsh-prompt libgit2.a libz.a libcurl.a libssh2.a libssl.a libcrypto.a dl pthread)
 
 INSTALL (TARGETS zsh-prompt DESTINATION bin)

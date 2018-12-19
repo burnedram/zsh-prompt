@@ -2,6 +2,14 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
 INCLUDE("${CMAKE_ROOT}/Modules/ExternalProject.cmake")
 
+EXTERNALPROJECT_ADD(libssl
+    URL https://www.openssl.org/source/openssl-1.1.0j.tar.gz
+    CONFIGURE_COMMAND cp -a ../libssl/. ./ && ./config --prefix=${CMAKE_BINARY_DIR}/deps --openssldir=${CMAKE_BINARY_DIR}/deps no-shared
+    BUILD_COMMAND make build_libs
+    INSTALL_COMMAND make install_dev
+    TEST_COMMAND ""
+)
+
 EXTERNALPROJECT_ADD(libz
     URL https://zlib.net/zlib-1.2.11.tar.gz
     CMAKE_ARGS
@@ -13,6 +21,7 @@ EXTERNALPROJECT_ADD(libz
 )
 
 EXTERNALPROJECT_ADD(libssh2
+    DEPENDS libssl
     DEPENDS libz
     URL https://github.com/libssh2/libssh2/releases/download/libssh2-1.8.0/libssh2-1.8.0.tar.gz
     CMAKE_ARGS
@@ -24,6 +33,7 @@ EXTERNALPROJECT_ADD(libssh2
 )
 
 EXTERNALPROJECT_ADD(libcurl
+    DEPENDS libssl
     DEPENDS libz
     URL https://github.com/curl/curl/releases/download/curl-7_63_0/curl-7.63.0.tar.gz
     CMAKE_ARGS
