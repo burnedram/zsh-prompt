@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <git2.h>
 #include "config.h"
+#include "term.h"
 
 void die_giterr(int error) {
     const git_error *e = giterr_last();
@@ -42,6 +43,7 @@ int cred(git_cred **out, const char *url, const char *username_from_url, unsigne
 int main() {
     git_libgit2_init();
     printf("Hello world! %s v%d.%d\n", PROJECT_NAME, PROJECT_VERSION_MAJOR, PROJECT_VERSION_MINOR);
+    printf("[" COLOR_2(BOLD, FG_CYAN) "master" COLOR_1(RESET) "@" COLOR_2(BOLD, FG_YELLOW) "deadbeef" COLOR_1(RESET) "] Up-to-date [" COLOR_1(FG_RED) "W" COLOR_1(RESET) "/" COLOR_1(FG_GREEN) "I" COLOR_1(RESET) "/" COLOR_1(FG_BLUE) "N" COLOR_1(RESET) "]\n");
     int error;
 
     {
