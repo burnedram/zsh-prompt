@@ -10,7 +10,7 @@ build: deps
 .PHONY: deps
 deps:
 	cd deps && \
-	mkdir -p build
+	mkdir -p build && \
 	cd build && \
 	cmake .. && \
 	cmake --build .

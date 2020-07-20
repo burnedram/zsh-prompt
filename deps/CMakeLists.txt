@@ -1,3 +1,4 @@
+project(zsh-promt-deps)
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
 INCLUDE("${CMAKE_ROOT}/Modules/ExternalProject.cmake")
