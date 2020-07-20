@@ -3,7 +3,9 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 INCLUDE("${CMAKE_ROOT}/Modules/ExternalProject.cmake")
 
 EXTERNALPROJECT_ADD(libssl
-    URL https://www.openssl.org/source/openssl-1.1.0j.tar.gz
+    #URL https://www.openssl.org/source/openssl-1.1.0j.tar.gz
+    URL ${CMAKE_SOURCE_DIR}/openssl-1.1.0j.tar.gz
+    URL_MD5 b4ca5b78ae6ae79da80790b30dbedbdc
     CONFIGURE_COMMAND cp -a ../libssl/. ./ COMMAND ./config --prefix=${CMAKE_SOURCE_DIR} --openssldir=${CMAKE_SOURCE_DIR} no-shared
     BUILD_COMMAND unset MFLAGS && unset MAKEFLAGS && unset MAKELEVEL && $(MAKE) build_libs
     INSTALL_COMMAND unset MFLAGS && unset MAKEFLAGS && unset MAKELEVEL && $(MAKE) install_dev
@@ -11,7 +13,9 @@ EXTERNALPROJECT_ADD(libssl
 )
 
 EXTERNALPROJECT_ADD(libz
-    URL https://zlib.net/zlib-1.2.11.tar.gz
+    #URL https://zlib.net/zlib-1.2.11.tar.gz
+    URL ${CMAKE_SOURCE_DIR}/zlib-1.2.11.tar.gz
+    URL_MD5 1c9f62f0778697a09d36121ead88e08e
     CMAKE_ARGS
         -DBUILD_SHARED_LIBS=OFF
         -DCMAKE_BUILD_TYPE=Release
@@ -23,7 +27,9 @@ EXTERNALPROJECT_ADD(libz
 EXTERNALPROJECT_ADD(libssh2
     DEPENDS libssl
     DEPENDS libz
-    URL https://github.com/libssh2/libssh2/releases/download/libssh2-1.8.0/libssh2-1.8.0.tar.gz
+    #URL https://github.com/libssh2/libssh2/releases/download/libssh2-1.8.0/libssh2-1.8.0.tar.gz
+    URL ${CMAKE_SOURCE_DIR}/libssh2-1.8.0.tar.gz
+    URL_MD5 3d1147cae66e2959ea5441b183de1b1c
     CMAKE_ARGS
         -DPKG_CONFIG_USE_CMAKE_PREFIX_PATH=ON
         -DCMAKE_PREFIX_PATH=${CMAKE_SOURCE_DIR}
@@ -37,7 +43,9 @@ EXTERNALPROJECT_ADD(libssh2
 EXTERNALPROJECT_ADD(libcurl
     DEPENDS libssl
     DEPENDS libz
-    URL https://github.com/curl/curl/releases/download/curl-7_63_0/curl-7.63.0.tar.gz
+    #URL https://github.com/curl/curl/releases/download/curl-7_63_0/curl-7.63.0.tar.gz
+    URL ${CMAKE_SOURCE_DIR}/curl-7.63.0.tar.gz
+    URL_MD5 6121427a7199cd6094fc48c9e31e8992
     CMAKE_ARGS
         -DPKG_CONFIG_USE_CMAKE_PREFIX_PATH=ON
         -DCMAKE_PREFIX_PATH=${CMAKE_SOURCE_DIR}
@@ -68,7 +76,9 @@ EXTERNALPROJECT_ADD(libgit2
     DEPENDS libz
     DEPENDS libssh2
     DEPENDS libcurl
-    URL https://github.com/libgit2/libgit2/archive/v0.27.7.tar.gz
+    #URL https://github.com/libgit2/libgit2/archive/v0.27.7.tar.gz
+    URL ${CMAKE_SOURCE_DIR}/libgit2-0.27.7.tar.gz
+    URL_MD5 5f3ef881ba0444254f765a2f0a1f3479
     CMAKE_ARGS
         -DPKG_CONFIG_USE_CMAKE_PREFIX_PATH=ON
         -DCMAKE_PREFIX_PATH=${CMAKE_SOURCE_DIR}
